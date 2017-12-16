@@ -60,13 +60,13 @@ function! s:promise_job(cmd)
 		function! job._out_cb(ch, msg) closure
 			" NOTE: 処理が重すぎるので
 			" lynx の出力結果から末尾の url を削除
-			if a:msg !~ '^http'
+			if a:msg !~ '^http:\/\/'
 				let out_msg .= a:msg . "\n"
 			endif
 		endfunction
 
 		function! job._err_cb(ch, msg) closure
-			if a:msg !~ '^http'
+			if a:msg !~ '^http:\/\/'
 				let err_msg .= a:msg . "\n"
 			endif
 		endfunction
