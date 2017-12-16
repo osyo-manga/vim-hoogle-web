@@ -58,11 +58,17 @@ function! s:promise_job(cmd)
 		let job = s:Job.new()
 
 		function! job._out_cb(ch, msg) closure
-			let out_msg .= a:msg . "\n"
+			" NOTE: 処理が重すぎるので
+			" lynx の出力結果から末尾の url を削除
+			if a:msg !~ '^http'
+				let out_msg .= a:msg . "\n"
+			endif
 		endfunction
 
 		function! job._err_cb(ch, msg) closure
-			let err_msg .= a:msg . "\n"
+			if a:msg !~ '^http'
+				let err_msg .= a:msg . "\n"
+			endif
 		endfunction
 
 		function! job._close_cb(ch) closure
@@ -134,8 +140,7 @@ function! hoogle#web#open(url)
 		call buffer.untap()
 	endif
 
-	let loading = timer_start(100, { timer -> buffer.setline(1, s:anime.next()) }, { "repeat" : -1 })
-" 	let loading = timer_start(100, { timer -> setbufline(buffer.number(), 1, s:anime.next()) }, { "repeat" : -1 })
+	let loading = timer_start(100, { timer -> setbufline(buffer.number(), 1, s:anime.next()) }, { "repeat" : -1 })
 
 	function! s:open_cb(resolve, reject) closure
 		let cmd = printf("lynx -dump -nonumbers %s", a:url)
@@ -144,12 +149,18 @@ function! hoogle#web#open(url)
 			return s:error("Failed url.")
 		endif
 
-		let job = s:promise_job(cmd).catch(a:reject)
+		let job = s:promise_job(cmd)
+		function! job._catch(result)
+			return s:error(a:result)
+		endfunction
+
 		function! job._then(result) closure
+			Debug then
 			call timer_stop(loading)
 			call buffer.clear()
-			call buffer.setline(1, split(a:result, "\n"))
-			call search(printf('^\s*\<%s\>', keyword))
+			call setbufline(buffer.number(), 1, split(a:result, "\n"))
+" 			call buffer.setline(1, split(a:result, "\n"))
+			call search(printf('\C^\s*\<%s\>', keyword))
 		endfunction
 	endfunction
 	return s:promise(funcref("s:open_cb"))
